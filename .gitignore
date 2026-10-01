@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Secrets — never push real keys
+.env
+
+# Data files (keep sample data only)
+data/*.pdf
+data/*.json
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
