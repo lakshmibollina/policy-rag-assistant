@@ -9,9 +9,14 @@ env/
 # Secrets — never push real keys
 .env
 
-# Data files (keep sample data only)
-data/*.pdf
-data/*.json
+# Personal Claude Code instructions (not shared)
+CLAUDE.local.md
+
+# Downloaded documents (re-create with: python scripts/download_data.py)
+data/raw/
+
+# Local vector database
+chroma_db/
 
 # OS / editor
 .DS_Store

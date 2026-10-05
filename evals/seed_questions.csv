@@ -1,0 +1,11 @@
+id,question,why_a_customer_asks_it
+q01,What is the deductible for an individual and for a family?,Most common first question when comparing plans
+q02,Is physical therapy covered, and is there a visit limit?,Common for injury recovery
+q03,How much do I pay for a primary care visit in network?,Everyday cost
+q04,Do I need a referral to see a specialist?,Decides whether they can book directly
+q05,What does an emergency room visit cost?,High-stakes, people check before or after an emergency
+q06,Are generic prescription drugs covered, and what is the copay?,Monthly cost for many people
+q07,What is the out-of-pocket maximum?,Worst-case yearly cost
+q08,Is out-of-network care covered?,Matters when a preferred doctor is not in network
+q09,Are mental health outpatient visits covered?,Increasingly common need
+q10,Does the plan cover cosmetic surgery?,Tests whether the assistant correctly says something is excluded
