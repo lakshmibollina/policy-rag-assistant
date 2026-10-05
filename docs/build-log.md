@@ -1,13 +1,12 @@
 # Build log
 
-One entry per step: what I did, what I decided and why, problems hit, and any numbers. This is my interview prep.
+One entry per step: what was done, the decisions made and why, problems hit, and measured results.
 
 ## Step 1: Setup (2026-10-01)
 
 - **Did:** created the repo, folder structure (`src`, `data`, `evals`, `prompts`, `docs`), `requirements.txt`, `.env.example` and README.
 - **Decided:** one repo per project; secrets live in `.env`, which is git-ignored; dependencies listed in `requirements.txt`.
 - **Why:** anyone can clone and run it, and no API key ever reaches GitHub.
-- **Interview answer:** "I set it up like a production repo from day one: dependencies in one file, secrets kept out of Git, and a README that tracks progress."
 
 ## Step 2: Data and real questions (2026-10-05)
 
@@ -16,4 +15,3 @@ One entry per step: what I did, what I decided and why, problems hit, and any nu
 - **Why:** the PDFs belong to the insurers and get updated each year; a source list plus a script keeps the repo small and makes the dataset reproducible.
 - **Decided:** included a question the documents should *not* answer positively (cosmetic surgery) so I can test that the assistant says "not covered" or "not found" instead of making something up.
 - **Problems hit:** (fill in, e.g. links that didn't download)
-- **Interview answer:** "I started from real user questions, not the technology. SBCs are a standard format every US plan must publish, so I could compare plans fairly, and I added questions designed to catch hallucination."

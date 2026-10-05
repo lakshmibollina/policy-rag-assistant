@@ -9,6 +9,9 @@ env/
 # Secrets — never push real keys
 .env
 
+# Personal Claude Code instructions (not shared)
+CLAUDE.local.md
+
 # Downloaded documents (re-create with: python scripts/download_data.py)
 data/raw/
 
