@@ -2,7 +2,7 @@
 
 Build a retrieval-augmented generation (RAG) system that answers health insurance questions using **only** the plan's own documents, cites the exact document and page for every answer, and says "not found" instead of guessing.
 
-![Status](https://img.shields.io/badge/status-in%20progress%20%E2%80%94%20step%202%20of%209-yellow?style=flat-square)
+![Status](https://img.shields.io/badge/status-in%20progress%20%E2%80%94%20step%203%20of%209-yellow?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![ChromaDB](https://img.shields.io/badge/ChromaDB-vector_store-FF6F00?style=flat-square)
 
@@ -63,7 +63,7 @@ Initial choices, to be tuned against the evaluation set.
 | Chunk size | ~600 tokens | Large enough to hold a full benefit row with its conditions |
 | Chunk overlap | 100 tokens | Avoids splitting a limit or exception from its benefit |
 | Chunk metadata | Document name, page number | Required for citations |
-| Embedding model | sentence-transformers (local) | Free, runs offline, no data leaves the machine |
+| Embedding model | `nomic-ai/modernbert-embed-base` via sentence-transformers | Free, runs offline; reads up to 8192 tokens, so a 600-token chunk is embedded in full |
 | Vector store | ChromaDB | Simple local persistence; no server to run |
 | Top-k retrieved | 5 | Enough context for multi-part answers without diluting the prompt |
 | Keyword search | BM25 (step 6) | Catches exact terms such as plan codes and drug tiers |
@@ -109,13 +109,14 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env               # then add your API key to .env
 python scripts/download_data.py    # downloads the policy PDFs into data/raw/
+python src/ingest.py               # chunks, embeds and stores them in chroma_db/
 ```
 
 ## Progress
 
 - [x] Step 1: Repo, environment and README
-- [ ] Step 2: Collect policy documents and real user questions
-- [ ] Step 3: Ingest documents into a vector database
+- [x] Step 2: Collect policy documents and real user questions
+- [x] Step 3: Ingest documents into a vector database
 - [ ] Step 4: Answer with citations
 - [ ] Step 5: Test set and baseline metrics
 - [ ] Step 6: Hybrid search and re-ranking
