@@ -1,13 +1,10 @@
-"""Step 3: read the policy PDFs, split them into chunks, embed them, and store them in ChromaDB.
-
-Each chunk keeps the file name and page number it came from, so answers can cite them.
-Running the script again rebuilds the collection from scratch.
+"""Step 3: chunk the policy PDFs, embed the chunks, and store them in ChromaDB.
 
 Usage:
     python src/ingest.py
 """
 
-import csv
+import shutil
 from pathlib import Path
 
 import chromadb
@@ -17,92 +14,41 @@ from sentence_transformers import SentenceTransformer
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "data" / "raw"
-SOURCES = ROOT / "data" / "sources.csv"
 DB_DIR = ROOT / "chroma_db"
 COLLECTION = "policies"
 
-# ModernBERT embed reads up to 8192 tokens, so a 600-token chunk is embedded in full.
-# (Many small models stop at 256 tokens and silently ignore the rest.)
+# Reads up to 8192 tokens, so 600-token chunks are embedded in full.
 EMBED_MODEL = "nomic-ai/modernbert-embed-base"
-# This model expects a prefix saying whether the text is a document or a query.
+# The model expects these prefixes on documents and queries.
 DOC_PREFIX = "search_document: "
-QUERY_PREFIX = "search_query: "  # used at question time (step 4)
-
-CHUNK_TOKENS = 600
-OVERLAP_TOKENS = 100
-
-
-def load_sources() -> dict[str, dict]:
-    """Issuer and plan name for each file, from data/sources.csv."""
-    with SOURCES.open(newline="", encoding="utf-8") as f:
-        return {row["file_name"]: row for row in csv.DictReader(f)}
-
-
-def read_pages(pdf_path: Path) -> list[tuple[int, str]]:
-    """Return (page_number, text) for each page that has text. Page numbers start at 1."""
-    reader = PdfReader(pdf_path)
-    pages = []
-    for number, page in enumerate(reader.pages, start=1):
-        text = (page.extract_text() or "").strip()
-        if text:  # skip blank or image-only pages
-            pages.append((number, text))
-    return pages
+QUERY_PREFIX = "search_query: "
 
 
 def main() -> None:
-    pdfs = sorted(RAW_DIR.glob("*.pdf"))
-    if not pdfs:
-        raise SystemExit(f"No PDFs in {RAW_DIR}. Run: python scripts/download_data.py")
-
-    print(f"Loading embedding model {EMBED_MODEL} (first run downloads it)...")
     model = SentenceTransformer(EMBED_MODEL)
-
-    # Measure chunk size with the embedding model's own tokenizer.
+    # Count tokens with the embedding model's own tokenizer.
     splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
-        model.tokenizer, chunk_size=CHUNK_TOKENS, chunk_overlap=OVERLAP_TOKENS
+        model.tokenizer, chunk_size=600, chunk_overlap=100
     )
-    sources = load_sources()
 
-    # Split page by page so every chunk belongs to exactly one page.
+    # Split each page separately so every chunk has a single page to cite.
     ids, texts, metadatas = [], [], []
-    for pdf in pdfs:
-        info = sources.get(pdf.name, {})
-        pages = read_pages(pdf)
-        before = len(texts)
-        for page_number, page_text in pages:
-            for i, chunk in enumerate(splitter.split_text(page_text)):
+    for pdf in sorted(RAW_DIR.glob("*.pdf")):
+        for page_number, page in enumerate(PdfReader(pdf).pages, start=1):
+            for i, chunk in enumerate(splitter.split_text(page.extract_text() or "")):
                 ids.append(f"{pdf.stem}-p{page_number}-c{i}")
                 texts.append(chunk)
-                metadatas.append({
-                    "file_name": pdf.name,
-                    "page": page_number,
-                    "issuer": info.get("issuer", ""),
-                    "plan": info.get("plan", ""),
-                })
-        print(f"read      {pdf.name}: {len(pages)} pages -> {len(texts) - before} chunks")
+                metadatas.append({"file_name": pdf.name, "page": page_number})
 
-    print(f"\nEmbedding {len(texts)} chunks...")
-    embeddings = model.encode(
-        [DOC_PREFIX + t for t in texts], batch_size=16, show_progress_bar=True
+    embeddings = model.encode([DOC_PREFIX + t for t in texts], show_progress_bar=True)
+
+    # Rebuild from scratch so re-runs never leave stale chunks.
+    shutil.rmtree(DB_DIR, ignore_errors=True)
+    collection = chromadb.PersistentClient(path=str(DB_DIR)).create_collection(
+        COLLECTION, metadata={"hnsw:space": "cosine"}
     )
-
-    # Start fresh each run so re-ingesting never leaves stale or duplicate chunks.
-    client = chromadb.PersistentClient(path=str(DB_DIR))
-    if COLLECTION in [c.name for c in client.list_collections()]:
-        client.delete_collection(COLLECTION)
-    collection = client.create_collection(COLLECTION, metadata={"hnsw:space": "cosine"})
     collection.add(ids=ids, documents=texts, metadatas=metadatas, embeddings=embeddings.tolist())
-
-    print(f"\nStored {collection.count()} chunks from {len(pdfs)} PDFs in {DB_DIR}")
-
-    # Quick check: run one search so you can see retrieval working.
-    question = "What is the deductible?"
-    query = model.encode([QUERY_PREFIX + question]).tolist()
-    hits = collection.query(query_embeddings=query, n_results=3)
-    print(f'\nSample search: "{question}"')
-    for meta, text in zip(hits["metadatas"][0], hits["documents"][0]):
-        snippet = " ".join(text.split())[:100]
-        print(f"  [{meta['file_name']}, p.{meta['page']}] {snippet}...")
+    print(f"Stored {collection.count()} chunks in {DB_DIR}")
 
 
 if __name__ == "__main__":
